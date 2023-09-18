@@ -1,6 +1,6 @@
 #!/bin/bash
 wget https://github.com/vaxilu/x-ui/releases/download/0.3.2/x-ui-linux-arm64.tar.gz
-tar zxvf x-ui-linux-amd64.tar.gz
+tar zxvf x-ui-linux-arm64.tar.gz
 
 cd /root/x-ui  
 
@@ -33,4 +33,4 @@ chmod 777 /etc/systemd/system/ui.service
 systemctl enable ui.service  
 systemctl start ui.service    
 systemctl restart ui.service   
-rm -rf /root/x-ui-linux-amd64.tar.gz
+rm -rf /root/x-ui-linux-arm64.tar.gz
