@@ -1,6 +1,6 @@
 #!/bin/bash
-wget https://github.com/vaxilu/x-ui/releases/download/0.3.2/x-ui-linux-amd64.tar.gz
-tar zxvf x-ui-linux-amd64.tar.gz
+wget https://github.com/LisonChan/ui/releases/download/x-ui/amd64.tar.gz
+tar zxvf amd64.tar.gz
 
 cd /root/x-ui  
 
