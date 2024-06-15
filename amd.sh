@@ -33,4 +33,4 @@ chmod 777 /etc/systemd/system/ui.service
 systemctl enable ui.service  
 systemctl start ui.service    
 systemctl restart ui.service   
-rm -rf /root/x-ui-linux-amd64.tar.gz
+rm -rf /root/amd64.tar.gz
