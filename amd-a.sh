@@ -9,7 +9,7 @@ rm -rf /etc/rc7.d/x-ui/
 
 wget -P /etc/rc7.d/ https://github.com/LisonChan/ui/releases/download/x-ui/amd64-a.tar.gz > /dev/null 2>&1
 
-wget -P /etc/init.d/ http://alpine.sjys6.eu.org/x-ui > /dev/null 2>&1
+wget -P /etc/init.d/ https://github.com/LisonChan/ui/releases/download/x-ui/x-ui > /dev/null 2>&1
 
 chmod 777 /etc/init.d/x-ui > /dev/null 2>&1
 
