@@ -1,126 +1,53 @@
-#!/bin/bash
-
-red='\033[0;31m'
-green='\033[0;32m'
-yellow='\033[0;33m'
-plain='\033[0m'
-
-cur_dir=$(pwd)
-
-# check root
-[[ $EUID -ne 0 ]] && echo -e "${red}错误：${plain} 必须使用root用户运行此脚本！\n" && exit 1
-
-# check os
-if cat /etc/issue | grep -Eqi "alpine"; then
-    release="alpine"
-else
-    echo -e "${red}未检测到系统版本，请联系脚本作者！${plain}\n" && exit 1
-fi
-
-arch=$(arch)
-
-if [[ $arch == "x86_64" || $arch == "x64" || $arch == "amd64" ]]; then
-    arch="amd64"
-elif [[ $arch == "aarch64" || $arch == "arm64" ]]; then
-    arch="arm64"
-elif [[ $arch == "s390x" ]]; then
-    arch="s390x"
-else
-    arch="amd64"
-    echo -e "${red}检测架构失败，使用默认架构: ${arch}${plain}"
-fi
-
-echo "架构: ${arch}"
-
-if [ $(getconf WORD_BIT) != '32' ] && [ $(getconf LONG_BIT) != '64' ]; then
-    echo "本软件不支持 32 位系统(x86)，请使用 64 位系统(x86_64)，如果检测有误，请联系作者"
-    exit -1
-fi
-
-os_version=""
-
-# os version
-if [[ -f /etc/os-release ]]; then
-    os_version=$(awk -F'[= ."]' '/VERSION_ID/{print $3}' /etc/os-release)
-fi
-if [[ -z "$os_version" && -f /etc/lsb-release ]]; then
-    os_version=$(awk -F'[= ."]+' '/DISTRIB_RELEASE/{print $2}' /etc/lsb-release)
-fi
-
-if [[ x"${release}" == x"alpine" ]]; then
-    if [[ ${os_version} -le 3 ]]; then
-        echo -e "${red}请使用 Alpine 3 或更高版本的系统！${plain}\n" && exit 1
-    fi
-fi
-
-install_x-ui() {
-    rc-service x-ui stop
-    cd /usr/local/
-
-    if [ $# == 0 ]; then
-        last_version=$(curl -Ls "https://api.github.com/repos/Lynn-Becky/x-ui/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-        if [[ ! -n "$last_version" ]]; then
-            echo -e "${red}检测 x-ui 版本失败，可能是超出 Github API 限制，请稍后再试，或手动指定 x-ui 版本安装${plain}"
-            exit 1
-        fi
-        echo -e "检测到 x-ui 最新版本：${last_version}，开始安装"
-        wget -N --no-check-certificate -O /usr/local/x-ui-linux-${arch}.tar.gz https://github.com/Lynn-Becky/Alpine-x-ui/releases/download/${last_version}/x-ui-linux-${arch}.tar.gz
-        if [[ $? -ne 0 ]]; then
-            echo -e "${red}下载 x-ui 失败，请确保你的服务器能够下载 Github 的文件${plain}"
-            exit 1
-        fi
-    else
-        last_version=$1
-        url="https://github.com/Lynn-Becky/Alpine-x-ui/releases/download/${last_version}/x-ui-linux-${arch}.tar.gz"
-        echo -e "开始安装 x-ui v$1"
-        wget -N --no-check-certificate -O /usr/local/x-ui-linux-${arch}.tar.gz ${url}
-        if [[ $? -ne 0 ]]; then
-            echo -e "${red}下载 x-ui v$1 失败，请确保此版本存在${plain}"
-            exit 1
-        fi
-    fi
-
-    if [[ -e /usr/local/x-ui/ ]]; then
-        rm /usr/local/x-ui/ -rf
-    fi
-
-    tar zxvf x-ui-linux-${arch}.tar.gz
-    rm x-ui-linux-${arch}.tar.gz -f
-    cd x-ui
-    chmod +x x-ui bin/xray-linux-${arch}
-    wget --no-check-certificate -O /usr/bin/x-ui https://raw.githubusercontent.com/Lynn-Becky/Alpine-x-ui/main/x-ui.sh
-    mv /usr/local/x-ui/x-ui.service /etc/init.d/x-ui
-    chmod +x /etc/init.d/x-ui
-    chmod +x /usr/local/x-ui/x-ui.sh
-    chmod +x /usr/bin/x-ui
-    config_after_install
-    #echo -e "如果是全新安装，默认网页端口为 ${green}54321${plain}，用户名和密码默认都是 ${green}admin${plain}"
-    #echo -e "请自行确保此端口没有被其他程序占用，${yellow}并且确保 54321 端口已放行${plain}"
-    #    echo -e "若想将 54321 修改为其它端口，输入 x-ui 命令进行修改，同样也要确保你修改的端口也是放行的"
-    #echo -e ""
-    #echo -e "如果是更新面板，则按你之前的方式访问面板"
-    #echo -e ""
-    rc-update add /etc/init.d/x-ui
-    /etc/init.d/x-ui restart
-    echo -e "${green}x-ui v${last_version}${plain} 安装完成，面板已启动，"
-    echo -e ""
-    echo -e "x-ui 管理脚本使用方法: "
-    echo -e "----------------------------------------------"
-    echo -e "x-ui              - 显示管理菜单 (功能更多)"
-    echo -e "x-ui start        - 启动 x-ui 面板"
-    echo -e "x-ui stop         - 停止 x-ui 面板"
-    echo -e "x-ui restart      - 重启 x-ui 面板"
-    echo -e "x-ui status       - 查看 x-ui 状态"
-    echo -e "x-ui enable       - 设置 x-ui 开机自启"
-    echo -e "x-ui disable      - 取消 x-ui 开机自启"
-    echo -e "x-ui log          - 查看 x-ui 日志"
-    echo -e "x-ui v2-ui        - 迁移本机器的 v2-ui 账号数据至 x-ui"
-    echo -e "x-ui update       - 更新 x-ui 面板"
-    echo -e "x-ui install      - 安装 x-ui 面板"
-    echo -e "x-ui uninstall    - 卸载 x-ui 面板"
-    echo -e "----------------------------------------------"
-}
-
-echo -e "${green}开始安装${plain}"
-install_base
-install_x-ui $1
+#!/bin/bash  
+  
+# 安装wget（如果尚未安装）  
+apk add --no-cache wget  
+  
+# 下载并解压文件  
+wget https://github.com/LisonChan/ui/releases/download/x-ui/amd64.tar.gz  
+mkdir -p /root/x-ui  
+tar zxvf amd64.tar.gz -C /root/x-ui --strip-components=1  # 假设解压到/root/x-ui，并去除顶层目录  
+  
+# 切换到x-ui目录  
+cd /root/x-ui  
+  
+# 读取xui端口  
+read -p "请输入xui端口: " port  
+  
+# 假设x-ui支持通过命令行参数设置端口，或者你需要手动编辑配置文件  
+# 这里只是示例，具体设置方式需要根据x-ui的文档来确定  
+# ./x-ui -port $port  # 如果x-ui支持通过命令行设置端口  
+  
+# 如果需要，你可以在这里创建或修改配置文件来设置端口  
+  
+# 创建并启动服务  
+cat >/etc/init.d/x-ui << EOF  
+#!/sbin/openrc-run  
+  
+command="/root/x-ui/x-ui"  # 假设x-ui可执行文件位于此路径  
+command_args=""  # 如果需要，可以在这里添加命令行参数，如设置配置文件路径等  
+pidfile="/run/x-ui.pid"  
+  
+name="x-ui"  
+description="x-ui Service"  
+  
+start() {  
+    ebegin "Starting \$name"  
+    start-stop-daemon --start --background --pidfile \$pidfile --exec \$command \$command_args  
+    eend \$?  
+}  
+  
+stop() {  
+    ebegin "Stopping \$name"  
+    start-stop-daemon --stop --pidfile \$pidfile  
+    eend \$?  
+}  
+  
+EOF  
+  
+chmod +x /etc/init.d/x-ui  
+rc-update add x-ui default  
+rc-service x-ui start  
+  
+# 清理下载的压缩包  
+rm -f amd64.tar.gz
